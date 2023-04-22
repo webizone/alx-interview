@@ -1,30 +1,58 @@
 #!/usr/bin/python3
-"""
-Validate UTF-8 encoded text.
-
-This is a simple example of how to use the utf8_validation module.
-"""
+""" a method that determines if a data set rep. a valid UTF-8 encoding"""
 
 
 def validUTF8(data):
-    """
-    Check if data os a valid UTF-8 encoding
-
-    Args:
-        data: A list of bytes.
-
-    Returns:
-        True if data is a valid UTF-8 encoding, False otherwise.
-    """
-    for byte in data:
-        if byte >> 7 == 0:
+    "valid UTF-8 method"""
+    skip = 0
+    n = len(data)
+    for i in range(n):
+        if skip > 0:
+            skip -= 1
             continue
-        elif byte >> 5 == 0b110:
-            continue
-        elif byte >> 4 == 0b1110:
-            continue
-        elif byte >> 3 == 0b11110:
-            continue
+        if type(data[i]) != int or data[i] < 0 or data[i] > 0x10ffff:
+            return False
+        elif data[i] <= 0x7f:
+            skip = 0
+        elif data[i] & 0b11111000 == 0b11110000:
+            # 4-byte utf-8 character encoding
+            span = 4
+            if n - i >= span:
+                next_body = list(map(
+                    lambda x: x & 0b11000000 == 0b10000000,
+                    data[i + 1: i + span],
+                ))
+                if not all(next_body):
+                    return False
+                skip = span - 1
+            else:
+                return False
+        elif data[i] & 0b11110000 == 0b11100000:
+            # 3-byte utf-8 character encoding
+            span = 3
+            if n - i >= span:
+                next_body = list(map(
+                    lambda x: x & 0b11000000 == 0b10000000,
+                    data[i + 1: i + span],
+                ))
+                if not all(next_body):
+                    return False
+                skip = span - 1
+            else:
+                return False
+        elif data[i] & 0b11100000 == 0b11000000:
+            # 2-byte utf-8 character encoding
+            span = 2
+            if n - i >= span:
+                next_body = list(map(
+                    lambda x: x & 0b11000000 == 0b10000000,
+                    data[i + 1: i + span],
+                ))
+                if not all(next_body):
+                    return False
+                skip = span - 1
+            else:
+                return False
         else:
             return False
     return True
